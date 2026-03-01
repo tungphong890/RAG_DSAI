@@ -5,9 +5,13 @@ Param(
 
 $ErrorActionPreference = "Stop"
 
-$projRoot = Split-Path -Parent $PSScriptRoot
-$modelsDir = if (Test-Path "$projRoot\models") { "$projRoot\models" } else { "$projRoot\shared\models\models" }
+$projRoot = $PSScriptRoot
+$modelsDir = "$projRoot\models"
 $dataDir = if (Test-Path "$projRoot\data") { "$projRoot\data" } else { "$projRoot\shared\data\data" }
+
+if (-not (Test-Path $modelsDir)) {
+  throw "Missing models directory: $modelsDir"
+}
 
 if ($BuildIndex) {
   Write-Host "[run_local_inference] Building FAISS index..."

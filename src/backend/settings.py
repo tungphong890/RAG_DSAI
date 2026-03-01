@@ -12,7 +12,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 MODEL_DIR_CANDIDATES: List[Path] = [
     PROJECT_ROOT / "models",
-    PROJECT_ROOT / "shared" / "models" / "models",
 ]
 DATA_DIR_CANDIDATES: List[Path] = [
     PROJECT_ROOT / "data",
