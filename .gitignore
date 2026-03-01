@@ -1,0 +1,24 @@
+.venv/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+logs/
+offload/
+.env
+.env.*
+
+# Local temp files
+*.tmp
+*.log
+
+# Ignore embedded model repository metadata
+models/bge-m3/.git_embedded_backup/
+shared/models/models/bge-m3/.git_embedded_backup/
+
+# GitHub Free cannot store these >2GB files
+models/bge-m3/pytorch_model.bin
+models/bge-m3/onnx/model.onnx_data
+shared/models/models/bge-m3/pytorch_model.bin
+shared/models/models/bge-m3/onnx/model.onnx_data
