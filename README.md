@@ -134,7 +134,11 @@ For each cycle:
 5. Move failures to `failed/` and append details to `app_data/docs/manual_review_required.md`.
 
 ## Model Files
-
+https://drive.google.com/drive/folders/1OvIWoob7eM1VU-Z8XDPzzOSyfm1pXYEO?hl=vi
+<img width="1511" height="177" alt="image" src="https://github.com/user-attachments/assets/a68a5a55-a8bf-4687-b086-df3b65b4cd99" />
+- 'model.onnx_data' should be put at this folder: models\bge-m3\onnx
+- 'pytorch_model.bin' should be put under this folder: models\bge-m3
+- 'qwen2.5-1.5b-instruct-q4_k_m.gguf" shoule be put under this folder: models\qwen2_5_1_5b_instruct\gguf
 Place local model artifacts in `models/`.
 
 Expected paths used by launcher/backend:
