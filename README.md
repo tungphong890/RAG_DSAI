@@ -9,6 +9,7 @@ Local Retrieval-Augmented Generation (RAG) question-answering system with:
 - Desktop launcher app (`MochiChatbot`) using pywebview
 
 This repository is structured for local execution on Windows and can run fully offline after model and data assets are prepared.
+<img width="1919" height="1022" alt="image" src="https://github.com/user-attachments/assets/5084ec64-149d-49ee-90fc-6f6e536fc83b" />
 
 ## 1. Repository Structure
 
