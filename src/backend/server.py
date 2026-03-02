@@ -46,18 +46,19 @@ except ImportError:
 try:
     import torch
 except Exception:
-    torch = None  # type: ignore
+    torch = None                
 
 
 _generator: Optional[Any] = None
 _hybrid_retriever: Optional[HybridRetriever] = None
 _reasoning: Optional[ReasoningPipeline] = None
+_startup_error: Optional[str] = None
 
 
 class AskRequest(BaseModel):
     question: str
     top_k: int = 3
-    mode: str = "hybrid"  # local | online | hybrid
+    mode: str = "hybrid"
     reasoning: Optional[bool] = None
     continue_request: Optional[bool] = False
     section_index: Optional[int] = None
@@ -165,10 +166,11 @@ def reload_generator() -> Dict[str, Any]:
 
 @app.on_event("startup")
 def _startup() -> None:
-    global _generator, _hybrid_retriever, _reasoning
+    global _generator, _hybrid_retriever, _reasoning, _startup_error
 
     print("[startup] Initializing RAG system...")
     try:
+        _startup_error = None
         os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
         paths = _resolve_paths()
         device_cfg = get_device_config()
@@ -187,14 +189,18 @@ def _startup() -> None:
         )
 
         if paths["gguf_path"].exists():
-            _generator = LlamaCppGenerator(
-                gguf_path=str(paths["gguf_path"]),
-                device=device_cfg.device,
-                max_new_tokens=256,
-                n_gpu_layers=28,
-                n_ctx=2048,
-                allow_ctx_fallback=True,
-            )
+            try:
+                _generator = LlamaCppGenerator(
+                    gguf_path=str(paths["gguf_path"]),
+                    device=device_cfg.device,
+                    max_new_tokens=256,
+                    n_gpu_layers=28,
+                    n_ctx=2048,
+                    allow_ctx_fallback=True,
+                )
+            except Exception as exc:
+                print(f"[startup] GGUF load failed, using fallback generator: {exc}")
+                _generator = FallbackExtractorGenerator()
         else:
             print("[startup] GGUF model not found, using fallback generator")
             _generator = FallbackExtractorGenerator()
@@ -208,7 +214,24 @@ def _startup() -> None:
         _generator = None
         _hybrid_retriever = None
         _reasoning = None
+        _startup_error = str(e)
         print(f"[startup] Initialization failed: {e}")
+
+
+def _not_ready_response(
+    start_time: float, mode: str, top_k: int, error_message: str
+) -> Dict[str, Any]:
+    message = error_message or "System is still initializing. Please try again shortly."
+    return {
+        "status": "success",
+        "answer": message,
+        "processing_time": time.time() - start_time,
+        "mode": mode,
+        "top_k": max(1, top_k),
+        "citations": [],
+        "sources": [],
+        "confidence": None,
+    }
 
 
 @app.post("/ask")
@@ -217,15 +240,36 @@ async def ask(req: AskRequest) -> Dict[str, Any]:
 
     start_time = time.time()
     try:
-        if _generator is None or _hybrid_retriever is None:
-            return {
-                "status": "error",
-                "message": "System not fully initialized",
-            }
-
         mode = (req.mode or "hybrid").strip().lower()
         if mode not in {"local", "online", "hybrid"}:
             mode = "hybrid"
+
+        if _generator is None or _hybrid_retriever is None:
+            if mode in {"online", "hybrid"}:
+                try:
+                    online_answer = str(
+                        web_search(req.question, max_results=max(1, req.top_k))
+                    ).strip()
+                    if online_answer:
+                        return {
+                            "status": "success",
+                            "answer": online_answer,
+                            "processing_time": time.time() - start_time,
+                            "mode": mode,
+                            "top_k": max(1, req.top_k),
+                            "citations": [],
+                            "sources": [],
+                            "confidence": None,
+                        }
+                except Exception:
+                    pass
+
+            return _not_ready_response(
+                start_time=start_time,
+                mode=mode,
+                top_k=req.top_k,
+                error_message=_startup_error or "",
+            )
 
         response_text = ""
         citations: List[Dict[str, Any]] = []

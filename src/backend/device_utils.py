@@ -21,7 +21,7 @@ import torch
 
 @dataclass(frozen=True)
 class DeviceConfig:
-    device: str  # 'cpu' or 'cuda'
+    device: str                   
     gpu_required: bool
 
 

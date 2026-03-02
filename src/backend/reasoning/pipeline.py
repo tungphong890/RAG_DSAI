@@ -110,18 +110,18 @@ class ReasoningPipeline:
                 snippets.append(sn)
                 ctx_for_llm.append(r)
 
-        # One-shot generation using aggregated contexts.
+                                                        
         gen_out = self.generator.answer(question, ctx_for_llm)
         answer_text = str(gen_out.get("answer", ""))
 
-        # Lightweight evidence chain
+                                    
         evidence_chain = []
         for sn in sorted(snippets, key=lambda x: x.score, reverse=True)[:6]:
             evidence_chain.append(
                 f"{sn.snippet_id} supports key context from {sn.source} ({sn.chunk_id})."
             )
 
-        # ELI5 + technical: simple transformations for now
+                                                          
         eli5 = answer_text
         if len(eli5) > 500:
             eli5 = eli5[:500].rstrip() + "..."
@@ -130,7 +130,7 @@ class ReasoningPipeline:
         claims = _sentence_claims(answer_text)
         verified = [self.verifier.verify(c, snippets) for c in claims]
 
-        # Confidence: mix of generator confidence + verifier support rate
+                                                                         
         gen_conf = float(gen_out.get("confidence", 0.0) or 0.0)
         supported = sum(1 for v in verified if v.verdict == "Supported")
         support_rate = supported / max(1, len(verified))

@@ -40,7 +40,7 @@ except ImportError:
 DEFAULT_EMBEDDING_MODEL_PATH = str(SETTINGS_DEFAULT_EMBEDDING_MODEL_PATH)
 DEFAULT_INDEX_DIR = str(SETTINGS_DEFAULT_INDEX_DIR)
 DEFAULT_RERANKER_MODEL = (
-    "cross-encoder/ms-marco-MiniLM-L-6-v2"  # Fast, lightweight reranker
+    "cross-encoder/ms-marco-MiniLM-L-6-v2"                              
 )
 
 
@@ -61,12 +61,12 @@ class HybridRetriever:
         self.device = get_device_config(device).device
         self.use_reranker = use_reranker
 
-        # Load FAISS index and chunks
+                                     
         print("[HybridRetriever] Loading FAISS index...")
         self.faiss_index = faiss.read_index(str(self.index_dir / "faiss.index"))
         self.chunks = self._load_chunks()
 
-        # Load embedding model
+                              
         print(f"[HybridRetriever] Loading embeddings from {embedding_model_path}...")
         os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -80,11 +80,11 @@ class HybridRetriever:
         ).to(self.device)
         self.embedding_model.eval()
 
-        # Build BM25 index
+                          
         print("[HybridRetriever] Building BM25 index...")
         self.bm25 = self._build_bm25_index()
 
-        # Load reranker (optional)
+                                  
         self.reranker = None
         env_use_reranker = os.environ.get("RAG_USE_RERANKER")
         if env_use_reranker is not None:
@@ -118,7 +118,7 @@ class HybridRetriever:
 
     def _build_bm25_index(self) -> BM25Okapi:
         """Build BM25 index from chunk texts"""
-        # Tokenize all chunks (simple whitespace + lowercase)
+                                                             
         tokenized_corpus = [chunk["text"].lower().split() for chunk in self.chunks]
         return BM25Okapi(tokenized_corpus)
 
@@ -135,7 +135,7 @@ class HybridRetriever:
         enc = {k: v.to(self.device) for k, v in enc.items()}
         out = self.embedding_model(**enc)
 
-        # Mean pooling
+                      
         token_embs = out.last_hidden_state
         attn = enc["attention_mask"].unsqueeze(-1).type_as(token_embs)
         summed = (token_embs * attn).sum(dim=1)
@@ -161,7 +161,7 @@ class HybridRetriever:
         tokenized_query = query.lower().split()
         scores = self.bm25.get_scores(tokenized_query)
 
-        # Get top-k indices
+                           
         top_indices = np.argsort(scores)[::-1][:top_k]
         results = [(int(idx), float(scores[idx])) for idx in top_indices]
         return results
@@ -177,7 +177,7 @@ class HybridRetriever:
         alpha: weight for vector search (1-alpha for BM25)
         """
 
-        # Normalize scores to [0, 1]
+                                    
         def normalize_scores(results: List[Tuple[int, float]]) -> Dict[int, float]:
             if not results:
                 return {}
@@ -190,7 +190,7 @@ class HybridRetriever:
         vec_scores = normalize_scores(vector_results)
         bm25_scores = normalize_scores(bm25_results)
 
-        # Combine scores
+                        
         all_indices = set(vec_scores.keys()) | set(bm25_scores.keys())
         combined = []
         for idx in all_indices:
@@ -199,7 +199,7 @@ class HybridRetriever:
             combined_score = alpha * vec_s + (1 - alpha) * bm25_s
             combined.append((idx, combined_score))
 
-        # Sort by combined score
+                                
         combined.sort(key=lambda x: x[1], reverse=True)
         return combined
 
@@ -210,13 +210,13 @@ class HybridRetriever:
         if not self.reranker or not candidates:
             return candidates[:top_k]
 
-        # Prepare query-document pairs
+                                      
         pairs = [[query, c["text"]] for c in candidates]
 
-        # Get reranker scores
+                             
         scores = self.reranker.predict(pairs)
 
-        # Sort by reranker score
+                                
         for i, score in enumerate(scores):
             candidates[i]["rerank_score"] = float(score)
 
@@ -227,8 +227,8 @@ class HybridRetriever:
         self,
         query: str,
         top_k: int = 5,
-        retrieval_k: int = 50,
-        alpha: float = 0.5,
+        retrieval_k: int = 100,
+        alpha: float = 0.7,
         use_reranker: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
         """
@@ -244,14 +244,14 @@ class HybridRetriever:
         Returns:
             List of ranked chunks with scores
         """
-        # Step 1: Retrieve candidates using hybrid search
+                                                         
         vector_results = self._vector_search(query, top_k=retrieval_k)
         bm25_results = self._bm25_search(query, top_k=retrieval_k)
 
-        # Step 2: Fuse scores
+                             
         fused_results = self._hybrid_fusion(vector_results, bm25_results, alpha=alpha)
 
-        # Step 3: Prepare candidates
+                                    
         candidates = []
         for rank, (idx, score) in enumerate(fused_results[:retrieval_k]):
             chunk = self.chunks[idx]
@@ -266,14 +266,14 @@ class HybridRetriever:
                 }
             )
 
-        # Step 4: Rerank (optional)
+                                   
         use_rerank = use_reranker if use_reranker is not None else self.use_reranker
         if use_rerank and self.reranker:
             candidates = self._rerank(query, candidates, top_k=top_k)
         else:
             candidates = candidates[:top_k]
 
-        # Update ranks after reranking
+                                      
         for i, c in enumerate(candidates):
             c["rank"] = i
 
@@ -301,7 +301,7 @@ def search_hybrid(
 
 
 if __name__ == "__main__":
-    # Test the hybrid retriever
+                               
     import sys
 
     if len(sys.argv) < 2:

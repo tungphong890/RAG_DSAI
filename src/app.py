@@ -116,6 +116,13 @@ def _inject_styles() -> None:
             color: var(--text-main);
         }
 
+        div[data-testid="stChatMessageContent"],
+        div[data-testid="stChatMessageContent"] * {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            cursor: text;
+        }
+
         div[data-testid="stChatInput"] textarea {
             background: #40414f;
             color: var(--text-main);
@@ -165,8 +172,6 @@ def _render_sidebar() -> None:
         st.button("New chat", use_container_width=True, on_click=_reset_chat)
         st.divider()
 
-        st.markdown("### Connection")
-        st.text_input("Backend URL", key="backend_url")
         st.number_input(
             "Request timeout (seconds)",
             min_value=10,
