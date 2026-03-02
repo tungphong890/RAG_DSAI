@@ -272,7 +272,7 @@ class LocalQwenGenerator:
 
         snippets = []
 
-        # Sort by score (descending) to get most relevant chunks
+                                                                
 
         sorted_contexts = sorted(
             [c for c in contexts if c.score is not None],
@@ -726,7 +726,7 @@ class LlamaCppGenerator:
                     max_tokens=self.max_new_tokens,
                     temperature=self.temperature,
                     top_p=self.top_p,
-                    stop=["</s>"],  # Remove source stops to allow longer answers
+                    stop=["</s>"],                                               
                 )
             except RuntimeError as e:
                 msg = str(e)
@@ -745,7 +745,7 @@ class LlamaCppGenerator:
                         max_tokens=self.max_new_tokens,
                         temperature=self.temperature,
                         top_p=self.top_p,
-                        stop=["</s>"],  # Remove source stops to allow longer answers
+                        stop=["</s>"],                                               
                     )
                 else:
                     raise
@@ -757,9 +757,9 @@ class LlamaCppGenerator:
         if isinstance(choices, list) and choices:
             answer_text = str(choices[0].get("text", ""))
 
-        # Fallback: if no choices, try to extract text directly from output
+                                                                           
         if not answer_text and isinstance(out, dict):
-            # Try common output formats
+                                       
             if "text" in out:
                 answer_text = str(out["text"])
             elif "content" in out:
@@ -767,7 +767,7 @@ class LlamaCppGenerator:
             elif isinstance(out, str):
                 answer_text = out
             else:
-                # Last resort: convert entire output to string
+                                                              
                 answer_text = str(out)
                 print(f"[DEBUG] Using fallback extraction: {answer_text[:200]}...")
 

@@ -133,8 +133,8 @@ def load_jsonl_documents(jsonl_path: str) -> List[Dict[str, Any]]:
 
 def chunk_documents(
     documents: List[Dict[str, Any]],
-    chunk_size: int = 1000,
-    chunk_overlap: int = 150,
+    chunk_size: int = 1500,
+    chunk_overlap: int = 200,
 ) -> List[ChunkRecord]:
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
@@ -159,8 +159,8 @@ def build_faiss_index(
     jsonl_path: str = DEFAULT_DATA_JSONL,
     index_dir: str = DEFAULT_INDEX_DIR,
     embedding_model_path: str = DEFAULT_EMBEDDING_MODEL_PATH,
-    chunk_size: int = 1000,
-    chunk_overlap: int = 150,
+    chunk_size: int = 1500,
+    chunk_overlap: int = 200,
     batch_size: int = 8,
 ) -> Tuple[str, str]:
     index_dir_path = Path(index_dir)

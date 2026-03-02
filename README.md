@@ -6,6 +6,7 @@ Local Retrieval-Augmented Generation (RAG) question-answering system with:
 - Streamlit frontend UI
 - Hybrid retrieval (dense vector + BM25)
 - Local LLM inference via GGUF (llama.cpp backend path)
+- Desktop launcher app (`MochiChatbot`) using pywebview
 
 This repository is structured for local execution on Windows and can run fully offline after model and data assets are prepared.
 
@@ -25,6 +26,8 @@ This repository is structured for local execution on Windows and can run fully o
 |-- models/                         # Local model artifacts
 |-- shared/data/data/               # Data + prebuilt index fallback
 |-- run_app.bat                     # Start backend + frontend
+|-- run_app_launcher.py             # Desktop launcher entrypoint
+|-- run_app_launcher.spec           # PyInstaller build spec
 |-- run_local_inference.ps1         # Backend-only launch helper
 |-- requirements.txt
 |-- .env.example
@@ -73,7 +76,36 @@ If `run_app.bat` closes immediately, run it from an open terminal to inspect the
 cmd /k run_app.bat
 ```
 
-## 5. Large Model Files (Google Drive)
+## 5. Desktop App (MochiChatbot)
+
+Build and run as a native desktop window:
+
+```powershell
+pyinstaller run_app_launcher.spec
+```
+
+Output executable:
+
+- `dist/MochiChatbot.exe`
+
+Run:
+
+```powershell
+.\dist\MochiChatbot.exe
+```
+
+Runtime state is written to:
+
+- `dist/app_data/`
+
+Main logs:
+
+- `dist/app_data/logs/launcher.log`
+- `dist/app_data/logs/backend.log`
+- `dist/app_data/logs/streamlit_stdout.log`
+- `dist/app_data/logs/streamlit_stderr.log`
+
+## 6. Large Model Files (Google Drive)
 
 GitHub Free cannot store files larger than 2 GB, even with Git LFS.  
 Two required files are intentionally excluded from git.
@@ -106,7 +138,7 @@ $required | ForEach-Object {
 }
 ```
 
-## 6. Data and Index
+## 7. Data and Index
 
 Default data/index fallback path:
 
@@ -125,7 +157,7 @@ Rebuild the FAISS index:
 python -m src.backend.ingest build
 ```
 
-## 7. Environment Variables
+## 8. Environment Variables
 
 Supported environment variables:
 
@@ -141,7 +173,7 @@ Supported environment variables:
 
 If not set, `src/backend/settings.py` uses project defaults.
 
-## 8. Backend API
+## 9. Backend API
 
 Main endpoints:
 
@@ -171,7 +203,7 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-## 9. Validation Checklist
+## 10. Validation Checklist
 
 1. Python import/syntax check:
 ```powershell
@@ -184,6 +216,6 @@ python -m uvicorn src.backend.server:app --host 127.0.0.1 --port 8000
 3. Open `http://127.0.0.1:8000/healthz` and confirm `"status":"ok"`
 4. Run `run_app.bat` and open frontend page
 
-## 10. License
+## 11. License
 
 This repository is licensed under the MIT License. See `LICENSE`.
