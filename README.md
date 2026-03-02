@@ -1,222 +1,210 @@
-# RAG QnA Project
+# MochiChatbot RAG Application
 
-Local Retrieval-Augmented Generation (RAG) question-answering system with:
+MochiChatbot is a local Retrieval-Augmented Generation (RAG) desktop app. It runs a FastAPI backend and Streamlit UI behind a native desktop window, with background ingestion for new PDFs and links.
 
-- FastAPI backend API
-- Streamlit frontend UI
-- Hybrid retrieval (dense vector + BM25)
-- Local LLM inference via GGUF (llama.cpp backend path)
-- Desktop launcher app (`MochiChatbot`) using pywebview
+## What This Project Does
 
-This repository is structured for local execution on Windows and can run fully offline after model and data assets are prepared.
-<img width="1919" height="1022" alt="image" src="https://github.com/user-attachments/assets/5084ec64-149d-49ee-90fc-6f6e536fc83b" />
+- Runs as a desktop app (`MochiChatbot.exe`) instead of opening a browser.
+- Starts backend and UI services in the background.
+- Watches for new content and updates the vector index automatically.
+- Keeps runtime files in `app_data/` (logs, queue, processed, failed, index data).
 
-## 1. Repository Structure
+<img width="1919" height="1022" alt="image" src="https://github.com/user-attachments/assets/17a2fb65-ea51-4210-a3a2-4868fe2f98c1" />
+
+
+## Current Project Structure
 
 ```text
 .
+|-- assets/
+|   `-- app.ico
+|-- dist/
+|   `-- MochiChatbot.exe
+|-- models/
+|   |-- bge-m3/
+|   `-- qwen2_5_1_5b_instruct/
+|-- shared/
+|   `-- data/data/
+|       |-- ds_ai_knowledge.jsonl
+|       |-- sample_data.jsonl
+|       `-- indexes/
 |-- src/
-|   |-- app.py                      # Streamlit frontend
+|   |-- app.py
 |   `-- backend/
-|       |-- server.py               # FastAPI app
-|       |-- settings.py             # Path/env resolution
-|       |-- ingest.py               # Build/search FAISS index
-|       |-- hybrid_retriever.py     # Retrieval layer
-|       |-- generator.py            # Generation layer
-|       `-- reasoning/              # Optional reasoning pipeline
-|-- models/                         # Local model artifacts
-|-- shared/data/data/               # Data + prebuilt index fallback
-|-- run_app.bat                     # Start backend + frontend
-|-- run_app_launcher.py             # Desktop launcher entrypoint
-|-- run_app_launcher.spec           # PyInstaller build spec
-|-- run_local_inference.ps1         # Backend-only launch helper
-|-- requirements.txt
+|       |-- server.py
+|       |-- ingest.py
+|       |-- hybrid_retriever.py
+|       |-- generator.py
+|       |-- settings.py
+|       |-- tools.py
+|       |-- device_manager.py
+|       |-- device_utils.py
+|       `-- reasoning/
 |-- .env.example
-`-- README.md                       # Single project README
+|-- LICENSE
+|-- requirements.txt
+|-- run_app.bat
+|-- run_app_launcher.py
+|-- run_app_launcher.spec
+`-- README.md
 ```
 
-## 2. Prerequisites
+## Runtime Layout (Created Automatically)
 
-1. Windows 10/11
-2. Python 3.10+ (3.11 or 3.12 recommended)
-3. Optional NVIDIA GPU + CUDA (for better performance)
-4. At least 16 GB RAM recommended
-5. Sufficient disk space for model files (at least 8 GB free)
+When you run the launcher (source or EXE), it creates:
 
-## 3. Setup
+```text
+app_data/
+|-- incoming/                  # drop new PDF files here
+|-- processed/                 # successfully ingested files
+|-- failed/                    # failed files/links
+|-- data/
+|   `-- auto_ingest.jsonl      # launcher-managed ingestion corpus
+|-- indexes/                   # index output target for launcher rebuild flow
+|-- logs/
+|   |-- launcher.log
+|   |-- backend.log
+|   |-- streamlit_stdout.log
+|   |-- streamlit_stderr.log
+|   |-- processed_links.json
+|   `-- failed_links.json
+|-- docs/
+|   `-- manual_review_required.md
+`-- EDIT_NOTES_FOR_OWNER.md
+```
 
-1. Create virtual environment:
+## Requirements
+
+- Windows 10/11 (primary target for EXE)
+- Python 3.10+
+- Local model files present under `models/`
+
+Install dependencies:
+
 ```powershell
 python -m venv .venv
-```
-2. Activate virtual environment:
-```powershell
 .venv\Scripts\activate
-```
-3. Install dependencies:
-```powershell
 pip install -r requirements.txt
+pip install pywebview requests uvicorn
 ```
 
-## 4. Run The System
+## Run Options
 
-1. Start full application (recommended):
-```bat
-run_app.bat
-```
-2. Backend URL: `http://127.0.0.1:8000`
-3. Frontend URL: `http://localhost:8501`
-
-`run_app.bat` starts:
-
-- FastAPI backend in one terminal
-- Streamlit frontend in the current terminal
-
-If `run_app.bat` closes immediately, run it from an open terminal to inspect the error:
-```powershell
-cmd /k run_app.bat
-```
-
-## 5. Desktop App (MochiChatbot)
-
-Build and run as a native desktop window:
+### Option A: Desktop launcher from source
 
 ```powershell
-pyinstaller run_app_launcher.spec
+python run_app_launcher.py
 ```
 
-Output executable:
+Expected behavior:
 
-- `dist/MochiChatbot.exe`
+- One native app window opens.
+- Backend + Streamlit run in hidden background processes.
+- Closing the window stops child services.
 
-Run:
+### Option B: Prebuilt EXE
 
 ```powershell
 .\dist\MochiChatbot.exe
 ```
 
-Runtime state is written to:
+If startup is slow, check logs under `app_data/logs/`.
 
-- `dist/app_data/`
+### Option C: Dev mode (legacy local web flow)
 
-Main logs:
-
-- `dist/app_data/logs/launcher.log`
-- `dist/app_data/logs/backend.log`
-- `dist/app_data/logs/streamlit_stdout.log`
-- `dist/app_data/logs/streamlit_stderr.log`
-
-## 6. Large Model Files (Google Drive)
-
-GitHub Free cannot store files larger than 2 GB, even with Git LFS.  
-Two required files are intentionally excluded from git.
-
-Google Drive folder for large files:
-
-- <https://drive.google.com/drive/folders/1OvIWoob7eM1VU-Z8XDPzzOSyfm1pXYEO?usp=sharing>
-
-Expected Drive contents and destination paths:
-
-| File in Drive | Approx size | Destination in repo | Required |
-|---|---:|---|---|
-| `pytorch_model.bin` | 2.115 GB | `models/bge-m3/pytorch_model.bin` | Yes |
-| `model.onnx_data` | 2.111 GB | `models/bge-m3/onnx/model.onnx_data` | Yes |
-| `qwen2.5-1.5b-instruct-q4_k_m.gguf` | 1.041 GB | `models/qwen2_5_1_5b_instruct/gguf/qwen2.5-1.5b-instruct-q4_k_m.gguf` | Yes |
-| `adapter_model.safetensors` | 0.150 GB | `models/final_adapter/adapter_model.safetensors` | Optional |
-
-Download or copy these files from Drive into the exact paths above before running inference.
-
-### Verify required model files
-
-```powershell
-$required = @(
-  "models/bge-m3/pytorch_model.bin",
-  "models/bge-m3/onnx/model.onnx_data",
-  "models/qwen2_5_1_5b_instruct/gguf/qwen2.5-1.5b-instruct-q4_k_m.gguf"
-)
-$required | ForEach-Object {
-  if (Test-Path $_) { "OK  - $_" } else { "MISS- $_" }
-}
+```bat
+run_app.bat
 ```
 
-## 7. Data and Index
+This starts backend and Streamlit for local development.
 
-Default data/index fallback path:
+## Auto Ingestion Workflow
 
-- `shared/data/data/`
+The launcher watcher runs on a fixed interval and checks:
 
-Important files:
+- `app_data/incoming/*.pdf`
+- `app_data/incoming_links.txt` (or JSON links input if configured)
 
-- `shared/data/data/sample_data.jsonl`
-- `shared/data/data/ds_ai_knowledge.jsonl`
-- `shared/data/data/indexes/faiss.index`
-- `shared/data/data/indexes/chunks.jsonl`
+For each cycle:
 
-Rebuild the FAISS index:
+1. Detect new PDFs and links.
+2. Extract text and append normalized records into `app_data/data/auto_ingest.jsonl`.
+3. Trigger index rebuild via `src.backend.ingest` (import call first, subprocess fallback).
+4. Move successful files to `processed/`.
+5. Move failures to `failed/` and append details to `app_data/docs/manual_review_required.md`.
 
-```powershell
-python -m src.backend.ingest build
-```
+## Model Files
 
-## 8. Environment Variables
+Place local model artifacts in `models/`.
 
-Supported environment variables:
+Expected paths used by launcher/backend:
 
+- `models/bge-m3/`
+- `models/qwen2_5_1_5b_instruct/gguf/qwen2.5-1.5b-instruct-q4_k_m.gguf`
+
+If models are missing, startup and answers can fail or fall back to reduced behavior.
+
+## Environment Variables
+
+Defaults are defined in code and `.env.example`.
+
+Most relevant variables:
+
+- `RAG_BACKEND_HOST`
+- `RAG_BACKEND_PORT`
+- `RAG_CORS_ORIGINS`
+- `RAG_BACKEND_URL`
+- `RAG_REQUEST_TIMEOUT_S`
 - `RAG_GGUF_PATH`
 - `RAG_EMBEDDING_MODEL_PATH`
 - `RAG_INDEX_DIR`
 - `RAG_DATA_JSONL`
-- `RAG_BACKEND_HOST`
-- `RAG_BACKEND_PORT`
-- `RAG_CORS_ORIGINS`
-- `RAG_ADAPTER_PATH`
-- `RAG_LLM_BACKEND`
 
-If not set, `src/backend/settings.py` uses project defaults.
+## Build EXE
 
-## 9. Backend API
+Build with PyInstaller spec:
 
-Main endpoints:
+```powershell
+pyinstaller run_app_launcher.spec
+```
+
+Output:
+
+- `dist/MochiChatbot.exe`
+
+## Troubleshooting
+
+### App does not open
+
+- Check `app_data/logs/launcher.log`.
+- Check `app_data/logs/streamlit_stderr.log`.
+- Confirm model paths exist.
+
+### "System not fully initialized"
+
+- Backend is still loading models or failed startup.
+- Review `app_data/logs/backend.log`.
+
+### Ingestion not updating
+
+- Confirm PDFs are in `app_data/incoming/`.
+- Confirm links file exists at `app_data/incoming_links.txt`.
+- Review `manual_review_required.md` for failures.
+
+## API Endpoints
+
+When backend is running:
 
 - `GET /healthz`
 - `POST /ask`
 - `POST /reload_generator`
 
-Example health check:
+Quick check:
 
 ```powershell
-Invoke-WebRequest http://127.0.0.1:8000/healthz | Select-Object -Expand Content
+Invoke-RestMethod http://127.0.0.1:8000/healthz
 ```
 
-Example ask request:
+## License
 
-```powershell
-$body = @{
-  question = "What is retrieval augmented generation?"
-  top_k = 3
-  mode = "hybrid"
-} | ConvertTo-Json
-
-Invoke-RestMethod `
-  -Uri "http://127.0.0.1:8000/ask" `
-  -Method Post `
-  -ContentType "application/json" `
-  -Body $body
-```
-
-## 10. Validation Checklist
-
-1. Python import/syntax check:
-```powershell
-python -m compileall -q src
-```
-2. Backend startup check:
-```powershell
-python -m uvicorn src.backend.server:app --host 127.0.0.1 --port 8000
-```
-3. Open `http://127.0.0.1:8000/healthz` and confirm `"status":"ok"`
-4. Run `run_app.bat` and open frontend page
-
-## 11. License
-
-This repository is licensed under the MIT License. See `LICENSE`.
+MIT License. See `LICENSE`.
