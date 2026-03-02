@@ -9,6 +9,9 @@ MochiChatbot is a local Retrieval-Augmented Generation (RAG) desktop app. It run
 - Watches for new content and updates the vector index automatically.
 - Keeps runtime files in `app_data/` (logs, queue, processed, failed, index data).
 
+<img width="1919" height="1022" alt="image" src="https://github.com/user-attachments/assets/17a2fb65-ea51-4210-a3a2-4868fe2f98c1" />
+
+
 ## Current Project Structure
 
 ```text
